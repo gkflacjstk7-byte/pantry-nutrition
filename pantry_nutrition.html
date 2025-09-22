@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>냉장고 식재료·영양 관리</title>
+  <style>
+    body { font-family: sans-serif; margin: 0; background: #f8fafc; color:#111; }
+    header { background:#0ea5e9; color:white; padding:12px 16px; font-weight:700; }
+    main { padding:16px; max-width:720px; margin:0 auto; }
+    h2 { margin-top:24px; }
+    .item, .log { border:1px solid #ddd; border-radius:12px; padding:12px; margin-bottom:12px; background:white; }
+    .row { display:flex; gap:8px; align-items:center; }
+    input, button { padding:6px 8px; border-radius:8px; border:1px solid #ccc; }
+    button { cursor:pointer; }
+    .grid { display:grid; grid-template-columns: repeat(2, 1fr); gap:8px; }
+    .muted { font-size:12px; color:#666; }
+  </style>
+</head>
+<body>
+  <header>냉장고 식재료·영양 관리</header>
+  <main>
+    <section>
+      <h2>식재료 추가</h2>
+      <div class="grid">
+        <input id="name" placeholder="이름">
+        <input id="qty" type="number" placeholder="재고(g/개)">
+        <input id="kcal" type="number" placeholder="100g당 kcal">
+        <input id="carb" type="number" placeholder="100g당 탄수화물">
+        <input id="prot" type="number" placeholder="100g당 단백질">
+        <input id="fat" type="number" placeholder="100g당 지방">
+      </div>
+      <button onclick="addItem()">추가</button>
+    </section>
+
+    <section>
+      <h2>식재료 목록</h2>
+      <div id="items"></div>
+    </section>
+
+    <section>
+      <h2>사용 기록</h2>
+      <div id="logs"></div>
+    </section>
+
+    <section>
+      <h2>오늘 합계</h2>
+      <div id="total"></div>
+    </section>
+  </main>
+
+<script>
+const LS_ITEMS = "pantry_items";
+const LS_LOGS = "pantry_logs";
+let items = JSON.parse(localStorage.getItem(LS_ITEMS)||"[]");
+let logs = JSON.parse(localStorage.getItem(LS_LOGS)||"[]");
+
+function save(){ localStorage.setItem(LS_ITEMS, JSON.stringify(items)); localStorage.setItem(LS_LOGS, JSON.stringify(logs)); render(); }
+function addItem(){
+  const n=document.getElementById('name').value.trim();
+  if(!n) return;
+  const it={id:Date.now(), name:n, qty:+qty.value, kcal:+kcal.value, carb:+carb.value, prot:+prot.value, fat:+fat.value};
+  items.push(it); save();
+  name.value=qty.value=kcal.value=carb.value=prot.value=fat.value="";
+}
+function useItem(id){
+  const amt=+prompt("사용량(g/개)?"); if(!amt) return;
+  const it=items.find(i=>i.id===id);
+  it.qty-=amt; if(it.qty<0) it.qty=0;
+  logs.push({t:new Date().toLocaleString(), name:it.name, amt, kcal:it.kcal*amt/100, carb:it.carb*amt/100, prot:it.prot*amt/100, fat:it.fat*amt/100});
+  save();
+}
+function delItem(id){ items=items.filter(i=>i.id!==id); save(); }
+function render(){
+  itemsEl=document.getElementById('items'); itemsEl.innerHTML="";
+  for(const it of items){
+    const d=document.createElement('div');d.className='item';
+    d.innerHTML=`<b>${it.name}</b> (재고:${it.qty})<br><span class=muted>100g당 ${it.kcal}kcal C${it.carb} P${it.prot} F${it.fat}</span><br>
+      <button onclick="useItem(${it.id})">사용</button>
+      <button onclick="delItem(${it.id})">삭제</button>`;
+    itemsEl.appendChild(d);
+  }
+  logsEl=document.getElementById('logs'); logsEl.innerHTML="";
+  let sum={kcal:0,carb:0,prot:0,fat:0};
+  for(const l of logs){
+    const d=document.createElement('div');d.className='log';
+    d.innerHTML=`${l.t} - ${l.name} ${l.amt}g → ${l.kcal.toFixed(1)}kcal C${l.carb.toFixed(1)} P${l.prot.toFixed(1)} F${l.fat.toFixed(1)}`;
+    logsEl.appendChild(d);
+    sum.kcal+=l.kcal; sum.carb+=l.carb; sum.prot+=l.prot; sum.fat+=l.fat;
+  }
+  document.getElementById('total').innerText=`${sum.kcal.toFixed(1)} kcal | C ${sum.carb.toFixed(1)}g P ${sum.prot.toFixed(1)}g F ${sum.fat.toFixed(1)}g`;
+}
+render();
+</script>
+</body>
+</html>
