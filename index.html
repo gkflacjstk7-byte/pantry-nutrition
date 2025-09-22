@@ -49,11 +49,29 @@
     .chip{font-size:12px;border:1px solid var(--line);background:var(--chip);border-radius:999px;padding:2px 8px}
     .muted{color:var(--muted)}
     .title{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .list{display:flex;flex-direction:column;gap:8px}
+
+    /* ▼ 변경: 리스트를 3단 그리드로 */
+    .list{
+      display:grid;
+      grid-template-columns:repeat(3, minmax(0, 1fr)); /* 데스크탑 3단 */
+      gap:12px;
+    }
+    /* 태블릿: 2단 */
+    @media (max-width:1024px){
+      .list{ grid-template-columns:repeat(2, 1fr); }
+    }
+    /* 모바일: 1단 */
+    @media (max-width:560px){
+      .list{ grid-template-columns:1fr; }
+    }
+
     .item{border:1px solid var(--line);background:#ffffff;border-radius:16px;padding:12px}
     .item-top{display:flex;gap:8px;align-items:flex-start}
     .item-actions{display:flex;gap:6px}
     .usebar{display:flex;gap:8px;align-items:center;margin-top:8px}
+    /* ▼ 선택 적용: 사용량 입력 폭을 너무 길지 않게 */
+    .usebar input[type="number"]{ max-width: 160px; }
+
     .macro{font-size:12px;color:var(--muted);margin-top:6px}
     .logs{display:flex;flex-direction:column;gap:8px}
     .log{border:1px solid var(--line);background:#ffffff;border-radius:14px;padding:8px;display:flex;justify-content:space-between}
@@ -66,6 +84,8 @@
     <div class="wrap">
       <h1>냉장고 식재료·영양 관리</h1>
       <input id="q" type="text" placeholder="품목 검색" />
+      <!-- ▼ 추가: 검색 지우기 버튼 -->
+      <button class="btn" id="clearSearch" title="검색 지우기">지우기</button>
       <button class="btn" id="exportBtn">내보내기</button>
       <label class="btn">불러오기<input id="importFile" type="file" accept="application/json" /></label>
       <button class="btn warn" id="resetBtn">초기화</button>
@@ -147,6 +167,7 @@
     // 초기 27개 품목
     const initialItems=[
       { name:"매일바이오 무가당 그릭요거트", qty:400, unit:"g", kcalPer100:90,  cPer100:5,   pPer100:7,   fPer100:4.8 },
+      { name:"굽네몰 언더299도시락",        qty:8, unit:"개", kcalPer100:285, cPer100:40, pPer100:18, fPer100:6, perIsPiece:true },
       { name:"애드스윗 스테비아 방울토마토",   qty:500, unit:"g", kcalPer100:18,  cPer100:3.9, pPer100:0.9, fPer100:0.2 },
       { name:"모짜렐라 피자치즈",             qty:200, unit:"g", kcalPer100:254, cPer100:2.8, pPer100:24.3,fPer100:15.9 },
       { name:"애호박(18cm 이상)",             qty:250, unit:"g", kcalPer100:20,  cPer100:3.5, pPer100:1.6, fPer100:0.2 },
@@ -300,6 +321,12 @@
 
     // 기타 이벤트
     $("#q").addEventListener("input",renderList);
+    // ▼ 추가: 검색 지우기 동작
+    $("#clearSearch").addEventListener("click",()=>{
+      $("#q").value="";
+      renderList();
+    });
+
     $("#clearToday").addEventListener("click",()=>{
       const k=todayKey(); logs=logs.filter(l=>l.dt.slice(0,10)!==k); saveLogs(logs); renderTotals();
     });
