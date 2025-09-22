@@ -39,7 +39,7 @@
     @media (max-width:1024px){.list{grid-template-columns:repeat(2,1fr)}}
     @media (max-width:560px){.list{grid-template-columns:1fr}}
 
-    .item{border:1px solid var(--line);background:#ffffff;border-radius:16px;padding:12px;overflow:hidden} /* 카드 밖 넘침 방지 */
+    .item{border:1px solid var(--line);background:#ffffff;border-radius:16px;padding:12px;overflow:hidden}
     .item-top{display:flex;gap:8px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
     .item-actions{display:flex;gap:6px;flex-shrink:0}
     .usebar{display:flex;gap:8px;align-items:center;margin-top:8px}
@@ -119,7 +119,7 @@
     const uid=()=>Math.random().toString(36).slice(2,10);
     const fmt=(n)=>isNaN(n)?"-":Number(n).toFixed(1);
 
-    // 초기 품목들
+    // 초기 품목들(안전한 id 사용: 이름 미포함)
     const initialItems=[
       { name:"매일바이오 무가당 그릭요거트", qty:400, unit:"g", kcalPer100:90,  cPer100:5,   pPer100:7,   fPer100:4.8 },
       { name:"애드스윗 스테비아 방울토마토",   qty:500, unit:"g", kcalPer100:18,  cPer100:3.9, pPer100:0.9, fPer100:0.2 },
@@ -148,7 +148,7 @@
       { name:"양배추(1개입)",                  qty:1000,unit:"g", kcalPer100:20,  cPer100:3.5, pPer100:1,   fPer100:0.2 },
       { name:"다향오리 촉촉 닭가슴살",         qty:600, unit:"g", kcalPer100:165, cPer100:0,   pPer100:31,  fPer100:3.6 },
       { name:"우삼겹 바로구이 대패",           qty:1000,unit:"g", kcalPer100:214, cPer100:0,   pPer100:21.4,fPer100:14.2 },
-    ].map((x,i)=>({id:`it_${i}_${x.name}`,...x}));
+    ].map((x,i)=>({id:`it_${i}`,...x}));  // 이름 미포함 id
 
     function loadItems(){
       try{const r=localStorage.getItem(LS_ITEMS); if(r) return JSON.parse(r);}catch{}
@@ -164,6 +164,18 @@
 
     let items=loadItems();
     let logs =loadLogs();
+
+    // 저장된 데이터에 공백/특수문자 id가 있으면 안전한 형태로 교체
+    function normalizeIds(){
+      let changed=false;
+      items=items.map((it,idx)=>{
+        const ok=typeof it.id==='string' && /^[A-Za-z0-9_-]+$/.test(it.id);
+        if(!ok){ changed=true; return {...it, id:`it_${idx}`}; }
+        return it;
+      });
+      if(changed) saveItems(items);
+    }
+    normalizeIds();
 
     const todayKey=()=>new Date().toISOString().slice(0,10);
     const calcMacro=(it,amt)=>{ const per=it.perIsPiece?1:100, r=it.perIsPiece?amt:amt/per; return {kcal:it.kcalPer100*r,c:it.cPer100*r,p:it.pPer100*r,f:it.fPer100*r}; };
@@ -188,12 +200,14 @@
     }
 
     function renderList(){
-      const q=($("#q").value||"").trim().toLowerCase();   // 빈값이면 전체
+      const q=($("#q").value||"").trim().toLowerCase();
       const arr=q?items.filter(it=>it.name.toLowerCase().includes(q)):items;
       const list=$("#list"); list.innerHTML="";
       arr.forEach(it=>{
+        // 렌더 전용 안전한 요소 id 생성(이름 미사용)
+        const amtId="amt_"+uid(), macId="mac_"+uid();
+
         const root=document.createElement("div"); root.className="item";
-        const amtId="amt_"+it.id, macId="mac_"+it.id;
         root.innerHTML=`
           <div class="item-top">
             <div style="flex:1;min-width:200px">
@@ -216,15 +230,19 @@
           <div id="${macId}" class="macro"></div>`;
         list.appendChild(root);
 
-        root.querySelector("#"+amtId).addEventListener("input",e=>{
-          const v=Number(e.target.value||0), box=root.querySelector("#"+macId);
-          if(!v){ box.textContent=""; return; }
+        // 안전한 id로 요소 찾기
+        const amtEl=root.querySelector("#"+amtId);
+        const macEl=root.querySelector("#"+macId);
+
+        amtEl.addEventListener("input",e=>{
+          const v=Number(e.target.value||0);
+          if(!v){ macEl.textContent=""; return; }
           const m=calcMacro(it,v);
-          box.textContent=`사용분 → ${fmt(m.kcal)}kcal, C ${fmt(m.c)}g, P ${fmt(m.p)}g, F ${fmt(m.f)}g`;
+          macEl.textContent=`사용분 → ${fmt(m.kcal)}kcal, C ${fmt(m.c)}g, P ${fmt(m.p)}g, F ${fmt(m.f)}g`;
         });
 
         root.querySelector("[data-use]").addEventListener("click",()=>{
-          const v=Number(root.querySelector("#"+amtId).value||0);
+          const v=Number(amtEl.value||0);
           if(!v||v<=0) return alert("사용 수량을 입력하세요");
           if((it.unit!=="개"&&!it.perIsPiece)&&v>it.qty){ if(!confirm("재고보다 많이 사용합니다. 계속할까요?")) return; }
           it.qty-=v; saveItems(items);
@@ -251,7 +269,7 @@
     $("#a_add").addEventListener("click",()=>{
       const itId=$("#a_add").dataset.editId;
       const obj={
-        id: itId || uid(),
+        id: itId || `it_${items.length?items.length:0}_${uid()}`.replace(/[^A-Za-z0-9_-]/g,''),
         name: $("#a_name").value.trim(),
         qty: Number($("#a_qty").value||0),
         unit: $("#a_unit").value,
@@ -284,7 +302,7 @@
     $("#exportBtn").addEventListener("click",()=>{
       const blob=new Blob([JSON.stringify({items,logs},null,2)],{type:"application/json"});
       const url=URL.createObjectURL(blob);
-      const a=document.createElement("a"); a.href=url; a.download=`pantry_${todayKey()}.json`;
+      const a=document.createElement("a"); a.href=url; a.download=`pantry_${new Date().toISOString().slice(0,10)}.json`;
       document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
     });
     $("#importFile").addEventListener("change",(e)=>{
@@ -294,8 +312,9 @@
         const d=JSON.parse(String(r.result));
         if(d.items) items=d.items;
         if(d.logs ) logs =d.logs ;
+        normalizeIds();              // 불러온 데이터도 정규화
         saveItems(items); saveLogs(logs);
-        $("#q").value="";          // 불러온 뒤 전체 보기
+        $("#q").value="";
         renderList(); renderTotals();
       }catch{ alert("불러오기 실패: JSON 형식 확인"); } };
       r.readAsText(f); e.target.value="";
@@ -303,11 +322,12 @@
     $("#resetBtn").addEventListener("click",()=>{
       if(!confirm("모든 재고/로그를 삭제하고 초기 목록으로 되돌릴까요?")) return;
       localStorage.removeItem(LS_ITEMS); localStorage.removeItem(LS_LOGS);
-      $("#q").value="";            // 초기화 후 전체 보기
-      location.reload();
+      items=[...initialItems]; saveItems(items); logs=[]; saveLogs(logs); // 즉시 주입
+      $("#q").value="";
+      renderList(); renderTotals();
     });
 
-    // 첫 렌더: 브라우저 자동완성 등으로 검색어가 남아 있을 수 있으니 비움
+    // 첫 렌더
     $("#q").value="";
     renderList();
     renderTotals();
