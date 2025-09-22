@@ -33,9 +33,6 @@
     .macro{font-size:12px;color:var(--muted);margin-top:6px}
     .logs{display:flex;flex-direction:column;gap:8px}
     .log{border:1px solid var(--line);background:#0a121c;border-radius:14px;padding:8px;display:flex;justify-content:space-between}
-    .hidden{display:none}
-    .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:16px}
-    .modal{width:100%;max-width:520px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}
     .mt-8{margin-top:16px}.mt-12{margin-top:24px}.w-100{width:100%}
     @media (max-width:560px){.grid4{grid-template-columns:repeat(2,1fr)}}
   </style>
@@ -45,14 +42,42 @@
     <div class="wrap">
       <h1>냉장고 식재료·영양 관리</h1>
       <input id="q" type="text" placeholder="품목 검색" />
-      <button class="btn" id="newBtn">추가</button>
       <button class="btn" id="exportBtn">내보내기</button>
       <label class="btn">불러오기<input id="importFile" type="file" accept="application/json" /></label>
       <button class="btn warn" id="resetBtn">초기화</button>
     </div>
   </header>
 
-  <main class="wrap">
+  <main class="wrap" style="flex-direction:column;align-items:stretch">
+    <!-- 항상 보이는 추가 폼 -->
+    <section class="card">
+      <div class="title" style="margin-bottom:8px;">품목 추가</div>
+      <div class="row" style="gap:8px;flex-wrap:wrap">
+        <input id="a_name" class="w-100" type="text" placeholder="이름" />
+        <div class="row w-100" style="gap:8px;">
+          <div style="flex:1"><div class="muted" style="font-size:12px;">수량</div><input id="a_qty" type="number" class="w-100" /></div>
+          <div style="width:120px"><div class="muted" style="font-size:12px;">단위</div>
+            <select id="a_unit" class="w-100"><option>g</option><option>ml</option><option>개</option></select>
+          </div>
+        </div>
+        <label class="row" style="gap:8px;font-size:14px;">
+          <input id="a_piece" type="checkbox" /> 100g/ml 기준이 아니라 1개 기준 영양 사용
+        </label>
+        <div class="row w-100" style="gap:8px;">
+          <div style="flex:1"><div class="muted" style="font-size:12px;">kcal/100 또는 1개</div><input id="a_k" type="number" class="w-100" /></div>
+          <div style="flex:1"><div class="muted" style="font-size:12px;">탄수 g</div><input id="a_c" type="number" class="w-100" /></div>
+        </div>
+        <div class="row w-100" style="gap:8px;">
+          <div style="flex:1"><div class="muted" style="font-size:12px;">단백 g</div><input id="a_p" type="number" class="w-100" /></div>
+          <div style="flex:1"><div class="muted" style="font-size:12px;">지방 g</div><input id="a_f" type="number" class="w-100" /></div>
+        </div>
+      </div>
+      <div class="row" style="gap:8px;justify-content:flex-end;margin-top:12px;">
+        <button class="btn primary" id="a_add">추가</button>
+      </div>
+    </section>
+
+    <!-- 오늘 합계 -->
     <section class="grid4 mt-8">
       <div class="card"><div class="muted" style="font-size:12px;">칼로리</div><div id="t_kcal" class="title" style="font-size:18px;">0.0 kcal</div></div>
       <div class="card"><div class="muted" style="font-size:12px;">탄수</div><div id="t_c" class="title" style="font-size:18px;">0.0 g</div></div>
@@ -60,8 +85,10 @@
       <div class="card"><div class="muted" style="font-size:12px;">지방</div><div id="t_f" class="title" style="font-size:18px;">0.0 g</div></div>
     </section>
 
+    <!-- 리스트 -->
     <section class="mt-12 list" id="list"></section>
 
+    <!-- 로그 -->
     <section class="mt-12">
       <div class="row" style="justify-content:space-between;margin-bottom:8px;">
         <div class="title">오늘 사용 로그</div>
@@ -71,126 +98,82 @@
     </section>
   </main>
 
-  <!-- Modal -->
-  <div id="modalWrap" class="modal-backdrop hidden" onclick="this.classList.add('hidden')">
-    <div class="modal" onclick="event.stopPropagation()">
-      <div class="title">품목 추가/편집</div>
-      <div class="row" style="gap:8px;margin-top:12px;flex-wrap:wrap;">
-        <input id="m_name" class="w-100" type="text" placeholder="이름" />
-        <div class="row w-100" style="gap:8px;">
-          <div style="flex:1"><div class="muted" style="font-size:12px;">수량</div><input id="m_qty" type="number" class="w-100" /></div>
-          <div style="width:120px"><div class="muted" style="font-size:12px;">단위</div>
-            <select id="m_unit" class="w-100">
-              <option>g</option><option>ml</option><option>개</option>
-            </select>
-          </div>
-        </div>
-        <label class="row" style="gap:8px;font-size:14px;">
-          <input id="m_piece" type="checkbox" />
-          100g/ml 기준이 아니라 1개 기준 영양 사용
-        </label>
-        <div class="row w-100" style="gap:8px;">
-          <div style="flex:1"><div class="muted" style="font-size:12px;">kcal/100 또는 1개</div><input id="m_k" type="number" class="w-100" /></div>
-          <div style="flex:1"><div class="muted" style="font-size:12px;">탄수 g</div><input id="m_c" type="number" class="w-100" /></div>
-        </div>
-        <div class="row w-100" style="gap:8px;">
-          <div style="flex:1"><div class="muted" style="font-size:12px;">단백 g</div><input id="m_p" type="number" class="w-100" /></div>
-          <div style="flex:1"><div class="muted" style="font-size:12px;">지방 g</div><input id="m_f" type="number" class="w-100" /></div>
-        </div>
-      </div>
-      <div class="row" style="gap:8px;justify-content:flex-end;margin-top:12px;">
-        <button class="btn" id="m_cancel" onclick="document.getElementById('modalWrap')?.classList.add('hidden')">취소</button>
-        <button class="btn primary" id="m_save">저장</button>
-      </div>
-    </div>
-  </div>
-
   <script>
-    const LS_ITEMS = "pantry_items_v1";
-    const LS_LOGS  = "pantry_logs_v1";
-    const $  = (s)=>document.querySelector(s);
-    const $$ = (s)=>Array.from(document.querySelectorAll(s));
-    const uid= ()=>Math.random().toString(36).slice(2,10);
-    const fmt= (n)=>isNaN(n)?"-":Number(n).toFixed(1);
+    const LS_ITEMS="pantry_items_v1", LS_LOGS="pantry_logs_v1";
+    const $=(s)=>document.querySelector(s);
+    const uid=()=>Math.random().toString(36).slice(2,10);
+    const fmt=(n)=>isNaN(n)?"-":Number(n).toFixed(1);
 
-    // 초기 27개 품목
-    const initialItems = [
-      { name:"매일바이오 무가당 그릭요거트", qty:400, unit:"g",  kcalPer100:90,  cPer100:5,   pPer100:7,   fPer100:4.8 },
-      { name:"애드스윗 스테비아 방울토마토",  qty:500, unit:"g",  kcalPer100:18,  cPer100:3.9, pPer100:0.9, fPer100:0.2 },
-      { name:"모짜렐라 피자치즈",            qty:200, unit:"g",  kcalPer100:254, cPer100:2.8, pPer100:24.3,fPer100:15.9 },
-      { name:"애호박(18cm 이상)",            qty:250, unit:"g",  kcalPer100:20,  cPer100:3.5, pPer100:1.6, fPer100:0.2 },
-      { name:"맑은물에 맑은콩 순두부",       qty:400, unit:"g",  kcalPer100:55,  cPer100:2.9, pPer100:4.8, fPer100:2.7 },
-      { name:"배민이지 고소한1급A저지방우유",qty:900, unit:"ml", kcalPer100:45,  cPer100:4.8, pPer100:3.4, fPer100:1.5 },
-      { name:"논알콜 칭따오",                qty:8,   unit:"개", kcalPer100:60,  cPer100:14,  pPer100:0,   fPer100:0,   perIsPiece:true },
-      { name:"비요뜨 초코링(138g)",          qty:3,   unit:"개", kcalPer100:198, cPer100:26,  pPer100:5,   fPer100:7,   perIsPiece:true },
-      { name:"요구르트 이오(80ml)",          qty:10,  unit:"개", kcalPer100:50,  cPer100:11,  pPer100:1,   fPer100:0,   perIsPiece:true },
-      { name:"스위티오 바나나",              qty:650, unit:"g",  kcalPer100:89,  cPer100:22.8,pPer100:1.1, fPer100:0.3 },
-      { name:"플라이밀 마녀스프 마라치킨",   qty:5,   unit:"개", kcalPer100:150, cPer100:15,  pPer100:10,  fPer100:5,   perIsPiece:true },
-      { name:"냉동 오징어링채",              qty:200, unit:"g",  kcalPer100:92,  cPer100:3.1, pPer100:15.6,fPer100:1.4 },
-      { name:"곰곰 단단하고 고소한 맷돌두부",qty:300, unit:"g",  kcalPer100:125, cPer100:7.9, pPer100:11,  fPer100:5.3 },
-      { name:"곰곰 염장미역줄기",            qty:1000,unit:"g",  kcalPer100:18,  cPer100:3,   pPer100:1,   fPer100:0.2 },
-      { name:"곰곰 흰다리 새우",             qty:200, unit:"g",  kcalPer100:106, cPer100:0.9, pPer100:20.3,fPer100:1.7 },
-      { name:"딜리조이 맥반석 구운란",       qty:30,  unit:"개", kcalPer100:73,  cPer100:0.6, pPer100:6.3, fPer100:5,   perIsPiece:true },
+    // 초기 27개
+    const initialItems=[ /* (네가 준 27개 그대로) */ 
+      { name:"매일바이오 무가당 그릭요거트", qty:400, unit:"g", kcalPer100:90, cPer100:5, pPer100:7, fPer100:4.8 },
+      { name:"애드스윗 스테비아 방울토마토", qty:500, unit:"g", kcalPer100:18, cPer100:3.9, pPer100:0.9, fPer100:0.2 },
+      { name:"모짜렐라 피자치즈", qty:200, unit:"g", kcalPer100:254, cPer100:2.8, pPer100:24.3, fPer100:15.9 },
+      { name:"애호박(18cm 이상)", qty:250, unit:"g", kcalPer100:20, cPer100:3.5, pPer100:1.6, fPer100:0.2 },
+      { name:"맑은물에 맑은콩 순두부", qty:400, unit:"g", kcalPer100:55, cPer100:2.9, pPer100:4.8, fPer100:2.7 },
+      { name:"배민이지 고소한1급A저지방우유", qty:900, unit:"ml", kcalPer100:45, cPer100:4.8, pPer100:3.4, fPer100:1.5 },
+      { name:"논알콜 칭따오", qty:8, unit:"개", kcalPer100:60, cPer100:14, pPer100:0, fPer100:0, perIsPiece:true },
+      { name:"비요뜨 초코링(138g)", qty:3, unit:"개", kcalPer100:198, cPer100:26, pPer100:5, fPer100:7, perIsPiece:true },
+      { name:"요구르트 이오(80ml)", qty:10, unit:"개", kcalPer100:50, cPer100:11, pPer100:1, fPer100:0, perIsPiece:true },
+      { name:"스위티오 바나나", qty:650, unit:"g", kcalPer100:89, cPer100:22.8, pPer100:1.1, fPer100:0.3 },
+      { name:"플라이밀 마녀스프 마라치킨", qty:5, unit:"개", kcalPer100:150, cPer100:15, pPer100:10, fPer100:5, perIsPiece:true },
+      { name:"냉동 오징어링채", qty:200, unit:"g", kcalPer100:92, cPer100:3.1, pPer100:15.6, fPer100:1.4 },
+      { name:"곰곰 단단하고 고소한 맷돌두부", qty:300, unit:"g", kcalPer100:125, cPer100:7.9, pPer100:11, fPer100:5.3 },
+      { name:"곰곰 염장미역줄기", qty:1000, unit:"g", kcalPer100:18, cPer100:3, pPer100:1, fPer100:0.2 },
+      { name:"곰곰 흰다리 새우", qty:200, unit:"g", kcalPer100:106, cPer100:0.9, pPer100:20.3, fPer100:1.7 },
+      { name:"딜리조이 맥반석 구운란", qty:30, unit:"개", kcalPer100:73, cPer100:0.6, pPer100:6.3, fPer100:5, perIsPiece:true },
       { name:"풀무원 지구식단 메밀두유면(150g)", qty:2, unit:"개", kcalPer100:80, cPer100:16, pPer100:3.5, fPer100:1.5, perIsPiece:true },
       { name:"풀무원 식물성 지구식단 남작두유면(150g)", qty:2, unit:"개", kcalPer100:80, cPer100:16, pPer100:3.5, fPer100:1.5, perIsPiece:true },
-      { name:"비비드키친 저당 짜장소스",     qty:300, unit:"g",  kcalPer100:90,  cPer100:15,  pPer100:3,   fPer100:2 },
+      { name:"비비드키친 저당 짜장소스", qty:300, unit:"g", kcalPer100:90, cPer100:15, pPer100:3, fPer100:2 },
       { name:"풀무원지구식단 얇은 두유면(150g)", qty:3, unit:"개", kcalPer100:80, cPer100:16, pPer100:3.5, fPer100:1.5, perIsPiece:true },
-      { name:"곰곰 아삭한 숙주나물",         qty:300, unit:"g",  kcalPer100:31,  cPer100:6,   pPer100:3,   fPer100:0.2 },
-      { name:"청정원 쉐프의치킨스톡 튜브",   qty:270, unit:"g",  kcalPer100:250, cPer100:10,  pPer100:15,  fPer100:15 },
-      { name:"청경채",                        qty:150, unit:"g",  kcalPer100:13,  cPer100:2,   pPer100:1.1, fPer100:0.1 },
-      { name:"팽이버섯",                      qty:300, unit:"g",  kcalPer100:42,  cPer100:7,   pPer100:2.7, fPer100:0.4 },
-      { name:"양배추(1개입)",                 qty:1000,unit:"g",  kcalPer100:20,  cPer100:3.5, pPer100:1,   fPer100:0.2 },
-      { name:"다향오리 촉촉 닭가슴살",        qty:600, unit:"g",  kcalPer100:165, cPer100:0,   pPer100:31,  fPer100:3.6 },
-      { name:"우삼겹 바로구이 대패",          qty:1000,unit:"g",  kcalPer100:214, cPer100:0,   pPer100:21.4,fPer100:14.2 },
-    ].map((x,i)=>({ id:`it_${i}_${x.name}`, ...x }));
+      { name:"곰곰 아삭한 숙주나물", qty:300, unit:"g", kcalPer100:31, cPer100:6, pPer100:3, fPer100:0.2 },
+      { name:"청정원 쉐프의치킨스톡 튜브", qty:270, unit:"g", kcalPer100:250, cPer100:10, pPer100:15, fPer100:15 },
+      { name:"청경채", qty:150, unit:"g", kcalPer100:13, cPer100:2, pPer100:1.1, fPer100:0.1 },
+      { name:"팽이버섯", qty:300, unit:"g", kcalPer100:42, cPer100:7, pPer100:2.7, fPer100:0.4 },
+      { name:"양배추(1개입)", qty:1000, unit:"g", kcalPer100:20, cPer100:3.5, pPer100:1, fPer100:0.2 },
+      { name:"다향오리 촉촉 닭가슴살", qty:600, unit:"g", kcalPer100:165, cPer100:0, pPer100:31, fPer100:3.6 },
+      { name:"우삼겹 바로구이 대패", qty:1000, unit:"g", kcalPer100:214, cPer100:0, pPer100:21.4, fPer100:14.2 },
+    ].map((x,i)=>({id:`it_${i}_${x.name}`,...x}));
 
-    function loadItems(){ try{const r=localStorage.getItem(LS_ITEMS); if(r) return JSON.parse(r);}catch{} localStorage.setItem(LS_ITEMS, JSON.stringify(initialItems)); return initialItems; }
+    function loadItems(){ try{const r=localStorage.getItem(LS_ITEMS); if(r) return JSON.parse(r);}catch{} localStorage.setItem(LS_ITEMS,JSON.stringify(initialItems)); return initialItems; }
     function loadLogs(){  try{const r=localStorage.getItem(LS_LOGS ); if(r) return JSON.parse(r);}catch{} return []; }
-    function saveItems(v){ localStorage.setItem(LS_ITEMS, JSON.stringify(v)); }
-    function saveLogs(v){  localStorage.setItem(LS_LOGS , JSON.stringify(v)); }
+    function saveItems(v){ localStorage.setItem(LS_ITEMS,JSON.stringify(v)); }
+    function saveLogs(v){  localStorage.setItem(LS_LOGS ,JSON.stringify(v)); }
 
-    let items = loadItems();
-    let logs  = loadLogs();
-    let editing = null;
+    let items=loadItems(), logs=loadLogs();
 
-    const todayKey = ()=>new Date().toISOString().slice(0,10);
-    function calcMacro(it, amount){
-      const per = it.perIsPiece ? 1 : 100;
-      const ratio = it.perIsPiece ? amount : (amount/per);
-      return { kcal:it.kcalPer100*ratio, c:it.cPer100*ratio, p:it.pPer100*ratio, f:it.fPer100*ratio };
-    }
+    const todayKey=()=>new Date().toISOString().slice(0,10);
+    const calcMacro=(it,amt)=>{ const per=it.perIsPiece?1:100, r=it.perIsPiece?amt:amt/per; return {kcal:it.kcalPer100*r,c:it.cPer100*r,p:it.pPer100*r,f:it.fPer100*r}; };
 
     function renderTotals(){
-      const tlogs = logs.filter(l=>l.dt.slice(0,10)===todayKey());
-      const acc = tlogs.reduce((a,l)=>({kcal:a.kcal+l.kcal,c:a.c+l.c,p:a.p+l.p,f:a.f+l.f}),{kcal:0,c:0,p:0,f:0});
-      $("#t_kcal").textContent = fmt(acc.kcal)+" kcal";
-      $("#t_c").textContent    = fmt(acc.c   )+" g";
-      $("#t_p").textContent    = fmt(acc.p   )+" g";
-      $("#t_f").textContent    = fmt(acc.f   )+" g";
-      const logsEl = $("#logs"); logsEl.innerHTML="";
-      tlogs.forEach(l=>{
+      const t=logs.filter(l=>l.dt.slice(0,10)===todayKey())
+        .reduce((a,l)=>({kcal:a.kcal+l.kcal,c:a.c+l.c,p:a.p+l.p,f:a.f+l.f}),{kcal:0,c:0,p:0,f:0});
+      $("#t_kcal").textContent=fmt(t.kcal)+" kcal";
+      $("#t_c").textContent=fmt(t.c)+" g"; $("#t_p").textContent=fmt(t.p)+" g"; $("#t_f").textContent=fmt(t.f)+" g";
+      const box=$("#logs"); box.innerHTML=""; 
+      logs.filter(l=>l.dt.slice(0,10)===todayKey()).forEach(l=>{
         const d=document.createElement("div"); d.className="log";
         d.innerHTML=`<div><div class="title" style="font-size:14px;">${l.name}</div><div class="muted" style="font-size:12px;">${new Date(l.dt).toLocaleTimeString()} · ${l.amount}${l.unit}</div></div><div style="text-align:right;font-size:12px;"><div>${fmt(l.kcal)} kcal</div><div>C ${fmt(l.c)} · P ${fmt(l.p)} · F ${fmt(l.f)}</div></div>`;
-        logsEl.appendChild(d);
+        box.appendChild(d);
       });
     }
 
     function renderList(){
       const q=$("#q").value.trim().toLowerCase();
-      const arr = q ? items.filter(it=>it.name.toLowerCase().includes(q)) : items;
+      const arr=q?items.filter(it=>it.name.toLowerCase().includes(q)):items;
       const list=$("#list"); list.innerHTML="";
       arr.forEach(it=>{
         const root=document.createElement("div"); root.className="item";
-        const amtId="amt_"+it.id; const macroBoxId="mac_"+it.id;
+        const amtId="amt_"+it.id, macId="mac_"+it.id;
         root.innerHTML=`
           <div class="item-top">
             <div style="flex:1">
               <div class="row" style="gap:6px;flex-wrap:wrap;">
                 <div class="title">${it.name}</div>
                 <span class="chip">재고: ${fmt(it.qty)} ${it.unit}</span>
-                ${it.perIsPiece ? '<span class="muted" style="font-size:12px;">(1개 기준 영양)</span>' : ''}
+                ${it.perIsPiece?'<span class="muted" style="font-size:12px;">(1개 기준 영양)</span>':''}
               </div>
-              <div class="macro">100${it.perIsPiece ? (it.unit==='개'?'%':'') : it.unit} 기준 · ${fmt(it.kcalPer100)}kcal · C ${fmt(it.cPer100)}g · P ${fmt(it.pPer100)}g · F ${fmt(it.fPer100)}g</div>
+              <div class="macro">100${it.perIsPiece?(it.unit==='개'?'%':''):it.unit} 기준 · ${fmt(it.kcalPer100)}kcal · C ${fmt(it.cPer100)}g · P ${fmt(it.pPer100)}g · F ${fmt(it.fPer100)}g</div>
             </div>
             <div class="item-actions">
               <button class="btn" data-edit="${it.id}">편집</button>
@@ -201,28 +184,34 @@
             <input id="${amtId}" type="number" class="w-100" placeholder="사용량 (${it.unit})" step="${(it.unit==='개'||it.perIsPiece)?1:5}" />
             <button class="btn primary" data-use="${it.id}">차감</button>
           </div>
-          <div id="${macroBoxId}" class="macro"></div>`;
+          <div id="${macId}" class="macro"></div>`;
         list.appendChild(root);
 
-        root.querySelector("#"+amtId).addEventListener("input",(e)=>{
-          const v=Number(e.target.value||0);
-          const box=root.querySelector("#"+macroBoxId);
+        root.querySelector("#"+amtId).addEventListener("input",e=>{
+          const v=Number(e.target.value||0), box=root.querySelector("#"+macId);
           if(!v){ box.textContent=""; return; }
-          const m=calcMacro(it,v);
-          box.textContent=`사용분 → ${fmt(m.kcal)}kcal, C ${fmt(m.c)}g, P ${fmt(m.p)}g, F ${fmt(m.f)}g`;
+          const m=calcMacro(it,v); box.textContent=`사용분 → ${fmt(m.kcal)}kcal, C ${fmt(m.c)}g, P ${fmt(m.p)}g, F ${fmt(m.f)}g`;
         });
 
         root.querySelector("[data-use]").addEventListener("click",()=>{
           const v=Number(root.querySelector("#"+amtId).value||0);
           if(!v||v<=0) return alert("사용 수량을 입력하세요");
           if((it.unit!=="개"&&!it.perIsPiece)&&v>it.qty){ if(!confirm("재고보다 많이 사용합니다. 계속할까요?")) return; }
-          it.qty -= v; saveItems(items);
+          it.qty-=v; saveItems(items);
           const m=calcMacro(it,v);
-          logs.unshift({ id:uid(), itemId:it.id, name:it.name, amount:v, unit:it.unit, dt:new Date().toISOString(), ...m });
+          logs.unshift({id:uid(),itemId:it.id,name:it.name,amount:v,unit:it.unit,dt:new Date().toISOString(),...m});
           saveLogs(logs); renderList(); renderTotals();
         });
 
-        root.querySelector("[data-edit]").addEventListener("click",()=>openModal(it.id));
+        root.querySelector("[data-edit]").addEventListener("click",()=>{
+          // 편집은 추가 폼을 재활용
+          $("#a_name").value=it.name; $("#a_qty").value=it.qty; $("#a_unit").value=it.unit; $("#a_piece").checked=!!it.perIsPiece;
+          $("#a_k").value=it.kcalPer100; $("#a_c").value=it.cPer100; $("#a_p").value=it.pPer100; $("#a_f").value=it.fPer100;
+          $("#a_add").dataset.editId=it.id; // 편집 모드 플래그
+          $("#a_add").textContent="저장";
+          window.scrollTo({top:0,behavior:"smooth"});
+        });
+
         root.querySelector("[data-del]").addEventListener("click",()=>{
           if(!confirm("이 품목을 삭제할까요? (로그는 보존됨)")) return;
           items=items.filter(x=>x.id!==it.id); saveItems(items); renderList();
@@ -230,26 +219,32 @@
       });
     }
 
-    function openModal(id){
-      const it = items.find(x=>x.id===id) || { id:uid(), name:"", qty:0, unit:"g", kcalPer100:0, cPer100:0, pPer100:0, fPer100:0, perIsPiece:false };
-      editing=it;
-      $("#m_name").value=it.name; $("#m_qty").value=it.qty; $("#m_unit").value=it.unit; $("#m_piece").checked=!!it.perIsPiece; $("#m_k").value=it.kcalPer100; $("#m_c").value=it.cPer100; $("#m_p").value=it.pPer100; $("#m_f").value=it.fPer100;
-      $("#modalWrap").classList.remove("hidden");
-    }
-    function closeModal(){ $("#modalWrap").classList.add("hidden"); }
-
-    // 이벤트
-    $("#newBtn").addEventListener("click",()=>openModal(""));
-    $("#m_cancel").addEventListener("click",closeModal);
-    $("#m_save").addEventListener("click",()=>{
-      const it=editing || { id:uid() };
-      it.name=$("#m_name").value.trim(); it.qty=Number($("#m_qty").value||0); it.unit=$("#m_unit").value; it.perIsPiece=$("#m_piece").checked;
-      it.kcalPer100=Number($("#m_k").value||0); it.cPer100=Number($("#m_c").value||0); it.pPer100=Number($("#m_p").value||0); it.fPer100=Number($("#m_f").value||0);
-      if(!it.name) return alert("이름을 입력하세요");
-      const i=items.findIndex(x=>x.id===it.id); if(i>=0) items[i]=it; else items.unshift(it);
-      saveItems(items); closeModal(); renderList();
+    // 추가/편집 저장
+    $("#a_add").addEventListener("click",()=>{
+      const itId=$("#a_add").dataset.editId;
+      const obj={
+        id: itId || uid(),
+        name: $("#a_name").value.trim(),
+        qty: Number($("#a_qty").value||0),
+        unit: $("#a_unit").value,
+        perIsPiece: $("#a_piece").checked,
+        kcalPer100: Number($("#a_k").value||0),
+        cPer100: Number($("#a_c").value||0),
+        pPer100: Number($("#a_p").value||0),
+        fPer100: Number($("#a_f").value||0),
+      };
+      if(!obj.name) return alert("이름을 입력하세요");
+      const idx=items.findIndex(x=>x.id===obj.id);
+      if(idx>=0) items[idx]=obj; else items.unshift(obj);
+      saveItems(items);
+      // 폼 리셋
+      $("#a_name").value=""; $("#a_qty").value=""; $("#a_unit").value="g"; $("#a_piece").checked=false;
+      $("#a_k").value=""; $("#a_c").value=""; $("#a_p").value=""; $("#a_f").value="";
+      delete $("#a_add").dataset.editId; $("#a_add").textContent="추가";
+      renderList();
     });
 
+    // 기타 이벤트
     $("#q").addEventListener("input",renderList);
     $("#clearToday").addEventListener("click",()=>{ const k=todayKey(); logs=logs.filter(l=>l.dt.slice(0,10)!==k); saveLogs(logs); renderTotals(); });
     $("#exportBtn").addEventListener("click",()=>{
@@ -258,19 +253,17 @@
     });
     $("#importFile").addEventListener("change",(e)=>{
       const f=e.target.files&&e.target.files[0]; if(!f) return;
-      const r=new FileReader(); r.onload=()=>{
-        try{ const d=JSON.parse(String(r.result)); if(d.items) items=d.items; if(d.logs) logs=d.logs; saveItems(items); saveLogs(logs); renderList(); renderTotals(); }
-        catch{ alert("불러오기 실패: JSON 형식 확인"); }
-      }; r.readAsText(f); e.target.value="";
+      const r=new FileReader(); r.onload=()=>{ try{ const d=JSON.parse(String(r.result)); if(d.items) items=d.items; if(d.logs) logs=d.logs; saveItems(items); saveLogs(logs); renderList(); renderTotals(); } catch{ alert("불러오기 실패: JSON 형식 확인"); } };
+      r.readAsText(f); e.target.value="";
     });
     $("#resetBtn").addEventListener("click",()=>{
       if(!confirm("모든 재고/로그를 삭제하고 초기 목록으로 되돌릴까요?")) return;
       localStorage.removeItem(LS_ITEMS); localStorage.removeItem(LS_LOGS); location.reload();
     });
 
-    // 첫 렌더 + 안전핀
+    // 첫 렌더
+    let items=items, logs=logs; // (명시적 유지)
     renderList(); renderTotals();
-    document.getElementById('modalWrap')?.classList.add('hidden');
   </script>
 </body>
 </html>
